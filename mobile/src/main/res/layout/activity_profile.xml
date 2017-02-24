@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/activity_setup"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context="edu.wpi.alcowatch.SetupActivity">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <TextView
+            android:text="Setup"
+            android:layout_width="match_parent"
+            android:layout_height="37dp"
+            android:id="@+id/textView2"
+            android:textAppearance="@style/TextAppearance.AppCompat.Title"
+            android:textAlignment="center" />
+
+        <EditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:ems="10"
+            android:id="@+id/profileHeightInput"
+            android:hint="Height" />
+
+        <EditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:ems="10"
+            android:hint="Weight"
+            android:id="@+id/profileWeightInput" />
+
+        <EditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:ems="10"
+            android:id="@+id/profileAgeInput"
+            android:hint="Age" />
+
+        <TextView
+            android:text="Birth Sex"
+            android:layout_width="match_parent"
+            android:layout_height="37dp"
+            android:id="@+id/textView"
+            android:textSize="30sp" />
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <RadioGroup
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:id="@+id/birthSexGroup"
+                android:layout_weight="1" >
+
+                <RadioButton
+                    android:text="Female"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/profileGenderFemale"
+                    android:onClick="setFemale"
+                    android:layout_weight="1"
+                    android:checked="true" />
+
+                <RadioButton
+                    android:text="Male"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/profileGenderMale"
+                    android:onClick="setMale"
+                    android:layout_weight="1" />
+
+            </RadioGroup>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="bottom">
+
+            <TextView
+                android:text="Emergency Action"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/textView3"
+                android:textAppearance="@style/TextAppearance.AppCompat.Widget.ActionBar.Title"
+                android:textAlignment="center" />
+
+            <RadioGroup
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1" >
+
+                <RadioButton
+                    android:text="Call Contact"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/profileEmergencyCallFriend"
+                    android:onClick="openEmergencyContactSelectionMenu"
+                    android:layout_weight="1" />
+
+                <RadioButton
+                    android:text="Call Uber"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/profileEmergencyCallUber"
+                    android:layout_weight="1" />
+
+                <RadioButton
+                    android:text="Disable Automobile"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/profileEmergencyKillSwitch"
+                    android:layout_weight="1"
+                    android:checked="true" />
+            </RadioGroup>
+
+            <Button
+                android:text="Submit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/submitbutton"
+                android:paddingBottom="0dp"
+                android:padding="0dp"
+                android:layout_marginBottom="0dp"
+                style="@android:style/Widget.DeviceDefault.Light.Button.Small"
+                android:onClick="submitProfile" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</RelativeLayout>
