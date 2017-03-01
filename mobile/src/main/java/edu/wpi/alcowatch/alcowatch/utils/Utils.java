@@ -128,7 +128,8 @@ public class Utils {
                     whereClauseMatchingTerm,
                     null,
                     null,
-                    sortOrder
+                    sortOrder,
+                    "600"
             );
 
             //Get our floats from the cursor

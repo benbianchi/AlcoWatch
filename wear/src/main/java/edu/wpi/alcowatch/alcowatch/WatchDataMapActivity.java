@@ -33,14 +33,7 @@ public class WatchDataMapActivity extends WearableActivity implements
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_data_map);
-        final WatchViewStub stub = (WatchViewStub) findViewById(R.id.watch_view_stub);
-        stub.setOnLayoutInflatedListener(new WatchViewStub.OnLayoutInflatedListener() {
-            @Override
-            public void onLayoutInflated(WatchViewStub stub) {
-                mTextView = (TextView) stub.findViewById(R.id.text);
-            }
-        });
+        setContentView(R.layout.activity_display);
 
         setAmbientEnabled();
 
@@ -104,8 +97,6 @@ public class WatchDataMapActivity extends WearableActivity implements
             Bundle data = intent.getBundleExtra("datamap");
 
             if (data.getString("type").equals("status")) {
-                final TextView tv = (TextView) findViewById(R.id.statustext);
-                tv.setText(data.getString("content"));
             } else if (data.getString("type").equals("data")) {
                 sendDataToPhone(data);
             }

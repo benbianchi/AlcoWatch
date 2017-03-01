@@ -48,6 +48,10 @@ public class WekaDataFormatter {
         atts.add(new Attribute("rollVelVarianceForward"));
         atts.add(new Attribute("rollVelMedianForward"));
         atts.add(new Attribute("rollVelVarianceBackward"));
+        atts.add(new Attribute("pitchVelMedianForward"));
+        atts.add(new Attribute("pitchVelVarianceForward"));
+        atts.add(new Attribute("pitchVelMedianBackward"));
+        atts.add(new Attribute("pitchVelVarianceBackward"));
         atts.add(new Attribute("yawVelMedianForward"));
         atts.add(new Attribute("yawVelVarianceForward"));
         atts.add(new Attribute("yawVelMedianBackward"));
@@ -61,8 +65,8 @@ public class WekaDataFormatter {
         atts.add(new Attribute("yVelMedianBackward"));
         atts.add(new Attribute("height"));
         atts.add(new Attribute("weight"));
-        atts.add(new Attribute("gender"));
         atts.add(new Attribute("age"));
+        atts.add(new Attribute("gender"));
 
         drinksBinVals = new ArrayList<String>();
         drinksBinVals.add("a");
@@ -70,13 +74,14 @@ public class WekaDataFormatter {
         atts.add(new Attribute("DrinksBin", drinksBinVals));
 
         // Second, create Instances object
-        data = new Instances("DataToClassify", atts, 0);
+        data = new Instances("DataToClassify", atts, 1);
 
         myDataInstance = new DenseInstance(data.numAttributes());
         data.add(myDataInstance);
 
 
         // Third, add data
+
         data.instance(0).setValue(0, numSteps);
         data.instance(0).setValue(1, bandpower);
         data.instance(0).setValue(2, totalHarmonicDistortion);
@@ -104,9 +109,10 @@ public class WekaDataFormatter {
         data.instance(0).setValue(24, yVelMedianBackward);
         data.instance(0).setValue(25, height);
         data.instance(0).setValue(26, weight);
-        data.instance(0).setValue(27, gender);
-        data.instance(0).setValue(28, age);
-        data.instance(0).setValue(28, "a");
+        data.instance(0).setValue(27, age);
+        data.instance(0).setValue(28, gender);
+        data.instance(0).setValue(29, "a");
+
     }
 
     /*

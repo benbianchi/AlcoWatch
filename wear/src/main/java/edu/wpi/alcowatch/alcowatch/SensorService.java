@@ -39,7 +39,7 @@ public class SensorService extends Service implements SensorEventListener {
 
     private LocalBroadcastManager localBroadcastManager;
 
-    private static int ACCELEROMETER_BLOCK_CAPACITY = 64;
+    private static int ACCELEROMETER_BLOCK_CAPACITY = 600;
     private static int ACCELEROMETER_BUFFER_CAPACITY = 2048;
 
     private static int mFeatLen = ACCELEROMETER_BLOCK_CAPACITY + 2;

@@ -6,53 +6,53 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.os.Environment;
-import android.provider.MediaStore;
+import android.os.SystemClock;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.RadioButton;
-import android.widget.TextView;
 import android.widget.Chronometer;
 import android.widget.EditText;
+import android.widget.RadioButton;
+import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-//import com.google.android.gms.wearable.DataApi;
-//import com.google.android.gms.wearable.DataMap;
-//import com.google.android.gms.wearable.PutDataMapRequest;
-//import com.google.android.gms.wearable.PutDataRequest;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEvent;
+import com.google.android.gms.wearable.DataEventBuffer;
+import com.google.android.gms.wearable.DataMap;
+import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.Wearable;
-
 
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import android.net.Uri;
 
-import org.w3c.dom.Attr;
-
+import edu.wpi.alcowatch.alcowatch.Classification.ClassificationHelper;
+import edu.wpi.alcowatch.alcowatch.utils.DatabaseContract;
 import weka.core.Attribute;
 import weka.core.Instances;
-import weka.core.DenseInstance;
-import weka.core.Instance;
 import weka.core.converters.ArffSaver;
+import weka.core.pmml.Array;
+
+//import com.google.android.gms.wearable.DataApi;
+//import com.google.android.gms.wearable.DataMap;
+//import com.google.android.gms.wearable.PutDataMapRequest;
+//import com.google.android.gms.wearable.PutDataRequest;
 
 
-public class MobileDataMapActivity extends AppCompatActivity implements
-        GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener{
-
-    GoogleApiClient googleClient;
+public class MobileDataMapActivity extends AppCompatActivity
+{
 
     private Chronometer chronometer;
 
@@ -63,15 +63,16 @@ public class MobileDataMapActivity extends AppCompatActivity implements
 
     int hasPermission = 0;
 
-    boolean serviceStarted = false;
-
     String mClass = "no_goggles";
 
     Intent serviceIntent;
 
+    public static Boolean classifying = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
 
         attributes = new ArrayList<>();
@@ -94,20 +95,16 @@ public class MobileDataMapActivity extends AppCompatActivity implements
         mDataset.setClassIndex(mDataset.numAttributes() - 1);
 
         chronometer = (Chronometer) findViewById(R.id.chronometer);
+        labelField = (EditText) findViewById(R.id.editText);
 
+        DatabaseContract.DatabaseHelper d = new DatabaseContract.DatabaseHelper(getApplicationContext());
+        SQLiteDatabase db = d.getWritableDatabase();
+        db.delete("sensor_readings","",new String[0]);
 
         // Register the local broadcast receiver
         IntentFilter messageFilter = new IntentFilter(Intent.ACTION_SEND);
         MessageReceiver messageReceiver = new MessageReceiver();
         LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, messageFilter);
-
-        // Build a new GoogleApiClient for the the Wearable API
-        googleClient = new GoogleApiClient.Builder(this)
-                .addApi(Wearable.API)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .build();
-
 
 
         int permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -121,61 +118,66 @@ public class MobileDataMapActivity extends AppCompatActivity implements
         serviceIntent = new Intent(this, MobileListenerService.class);
         startService(serviceIntent);
 
-                if (serviceStarted) {
-                    serviceStarted = false;
-                    chronometer.stop();
-                    saveToFile();
-                } else {
+        final RadioButton radioNoGoggles = (RadioButton) findViewById(R.id.radioButton);
+        final RadioButton radioGreenGoggles = (RadioButton) findViewById(R.id.radioButton2);
+        final RadioButton radioBlackGoggles = (RadioButton) findViewById(R.id.radioButton3);
+        final RadioButton radioRedGoggles = (RadioButton) findViewById(R.id.radioButton4);
+        final RadioButton radioOrangeGoggles = (RadioButton) findViewById(R.id.radioButton5);
+        radioNoGoggles.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v){
+                mClass = "no_goggles";
+            }
+        });
+        radioGreenGoggles.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v){
+                mClass = "green_goggles";
+            }
+        });
+        radioBlackGoggles.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v){
+                mClass = "black_goggles";
+            }
+        });
+        radioRedGoggles.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v){
+                mClass = "red_goggles";
+            }
+        });
+        radioOrangeGoggles.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v){ mClass = "orange_goggles";    }
+        });
 
-                    serviceIntent.putExtra("class", mClass);
+        final Button button = (Button) findViewById(R.id.sendButton);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
 
-                    chronometer.setBase(SystemClock.elapsedRealtime());
-                    chronometer.start();
-                    mDataset.delete();
-                    mDataset = new Instances("mqp_features", attributes, 10000);
-                    mDataset.setClassIndex(mDataset.numAttributes() - 1);
-                    serviceStarted = true;
-                }
+            }
+        });
+
     }
 
-    protected void saveToFile(){
-        File outputFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), labelField.getText() + "-" + System.currentTimeMillis() + ".arff");
-        if (mDataset != null) {
-            ArffSaver saver = new ArffSaver();
-            saver.setInstances(mDataset);
+    protected void onFullReadingComplete(){
 
+        ClassificationHelper ch = new ClassificationHelper(this.getApplicationContext());
+        ch.execute();
 
-            Log.v("MQP", "FILE " + outputFile.getAbsolutePath());
-            try {
-                saver.setFile(outputFile);
-                saver.writeBatch();
+        classifying = false;
 
-                Intent intent =
-                        new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-                intent.setData(Uri.fromFile(outputFile));
-                sendBroadcast(intent);
-            } catch (IOException e) {
-                Log.e("MQP", "error saving");
-                e.printStackTrace();
-            }
-
-        } else {
-            Log.v("MQP", "Dataset NULL");
-        }
     }
 
     // Connect to the data layer when the Activity starts
     @Override
     protected void onStart() {
         super.onStart();
-        googleClient.connect();
     }
 
-    @Override
-    public void onConnected(Bundle connectionHint) {
-
-
-    }
+    private static final String MOBILE_DATA_PATH = "/mobile_data";
 
     public void onDestroy(){
         stopService(serviceIntent);
@@ -185,77 +187,21 @@ public class MobileDataMapActivity extends AppCompatActivity implements
     // Disconnect from the data layer when the Activity stops
     @Override
     protected void onStop() {
-        if (null != googleClient && googleClient.isConnected()) {
-            googleClient.disconnect();
-        }
         super.onStop();
     }
 
-    // Placeholders for required connection callbacks
-    @Override
-    public void onConnectionSuspended(int cause) { }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) { }
-
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        return super.onOptionsItemSelected(item);
-    }
-
-//    public void sendToWearable(String content) {
-//        String WEARABLE_DATA_PATH = "/wearable_data";
-//
-//        DataMap dataMap = new DataMap();
-//        dataMap.putString("content", content);
-//        dataMap.putString("type", "status");
-//        dataMap.putLong("timestamp", System.currentTimeMillis());
-//        new SendToDataLayerThread(WEARABLE_DATA_PATH, dataMap).start();
-//    }
-//
-//    class SendToDataLayerThread extends Thread {
-//        String path;
-//        DataMap dataMap;
-//
-//        // Constructor for sending data objects to the data layer
-//        SendToDataLayerThread(String p, DataMap data) {
-//            path = p;
-//            dataMap = data;
-//        }
-//
-//        public void run() {
-//            // Construct a DataRequest and send over the data layer
-//            PutDataMapRequest putDMR = PutDataMapRequest.create(path);
-//            putDMR.getDataMap().putAll(dataMap);
-//            PutDataRequest request = putDMR.asPutDataRequest();
-//            DataApi.DataItemResult result = Wearable.DataApi.putDataItem(googleClient, request).await();
-//            if (result.getStatus().isSuccess()) {
-////                Log.v("MQP", "DataMap: " + dataMap + " sent successfully to data layer ");
-//            } else {
-//                // Log an error
-//                Log.v("MQP", "ERROR: failed to send DataMap to data layer");
-//            }
-//        }
-//    }
-
     public class MessageReceiver extends BroadcastReceiver {
 
+        DatabaseContract.DatabaseHelper d = new DatabaseContract.DatabaseHelper(getApplicationContext());
+        SQLiteDatabase db = d.getWritableDatabase();
         public final DecimalFormat df = new DecimalFormat("#.##");
 
         @Override
         public void onReceive(Context context, Intent intent) {
+            Log.v("AW","onReceive");
+            if(classifying)
+                return;
+            classifying = true;
             Bundle data = intent.getBundleExtra("datamap");
             if (data.getString("type").equals("status")) {
                 //
@@ -271,27 +217,17 @@ public class MobileDataMapActivity extends AppCompatActivity implements
                 float[] gz = data.getFloatArray("gz");
 
                 String output = "Receiving Data";
+                TextView tv = (TextView) findViewById(R.id.output);
+                tv.setText(output);
 
-                if (serviceStarted == true) {
-                    if (attributes == null) {
-                        Log.v("MQP", "attributes null");
-                        return;
-                    }
+                for (int i = 0; i < x.length; i++) {
 
-                    for (int i = 0; i < x.length; i++) {
-                        Instance inst = new DenseInstance(attributes.size());
-                        inst.setDataset(mDataset);
-                        inst.setValue(mDataset.attribute("dt"), dt[i]);
-                        inst.setValue(mDataset.attribute("x"), x[i]);
-                        inst.setValue(mDataset.attribute("y"), y[i]);
-                        inst.setValue(mDataset.attribute("z"), z[i]);
-                        inst.setValue(mDataset.attribute("gx"), gx[i]);
-                        inst.setValue(mDataset.attribute("gy"), gy[i]);
-                        inst.setValue(mDataset.attribute("gz"), gz[i]);
-                        inst.setValue(mDataset.attribute("goggles_class"), mClass);
-                        mDataset.add(inst);
-                    }
+                    d.InsertIntoAcc(db,dt[i],x[i],y[i],z[i]);
+                    d.InsertIntoGryo(db,dt[i],gx[i],gy[i],gz[i]);
+
                 }
+
+                onFullReadingComplete();
             }
         }
     }

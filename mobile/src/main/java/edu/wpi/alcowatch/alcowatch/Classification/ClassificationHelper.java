@@ -5,8 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
-import android.location.Location;
-import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -19,7 +17,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -28,12 +25,14 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
+import edu.wpi.alcowatch.alcowatch.MobileDataMapActivity;
 import edu.wpi.alcowatch.alcowatch.ProfileActivity;
 import edu.wpi.alcowatch.alcowatch.utils.DatabaseContract;
 import edu.wpi.alcowatch.alcowatch.utils.Utils;
-import edu.wpi.alcowatch.alcowatch.Classification.WekaDataFormatter;
-import weka.classifiers.Classifier;
+import weka.classifiers.trees.RandomForest;
 import weka.core.Instances;
+import weka.core.converters.ConverterUtils;
+
 /**
  * Created by Jacob Watson on 2/9/17.
  */
@@ -51,7 +50,7 @@ public class ClassificationHelper extends AsyncTask<Context, Void, String> {
     String featureExtractionResults;
     SharedPreferences bacSharedPreferences;
     String bin;
-    Classifier cls;
+    RandomForest cls;
     SQLiteDatabase readableDB;
     SQLiteDatabase writableDatabase;
 
@@ -69,8 +68,7 @@ public class ClassificationHelper extends AsyncTask<Context, Void, String> {
             runCallToAPIToStartFeatureExtraction();
         } catch (IOException e) {
             Log.e(TAG, e.getMessage());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Log.e(TAG, e.getMessage());
             throw new RuntimeException(e);
         }
@@ -79,7 +77,7 @@ public class ClassificationHelper extends AsyncTask<Context, Void, String> {
     }
 
     @Override
-    protected void onPostExecute(String result){
+    protected void onPostExecute(String result) {
         //Result these flags so we can give the user these various alerts again.
         resetFlagsSoWeCanSendAlertsAgain();
 
@@ -100,16 +98,21 @@ public class ClassificationHelper extends AsyncTask<Context, Void, String> {
         //Step 4: Add BAC reading and other info to database
         addReadingToDatabaseAndPreferences();
 
-        //Step 5: Reopen the main activity
-        Intent intent = new Intent(mContext, ProfileActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        mContext.startActivity(intent);
+        bacSharedPreferences = mContext.getSharedPreferences(Utils.BAC_NOTIFICATION_SETTINGS, mContext.MODE_PRIVATE);
+        Log.v("Watch Results", bacSharedPreferences.getString(Utils.FEATURE_EXTRACTION_RESULTS, ""));
+
+//        //Step 5: Reopen the main activity
+//        Intent intent = new Intent(mContext, ProfileActivity.class);
+//        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//        mContext.startActivity(intent);
+
+        MobileDataMapActivity.classifying = false;
     }
 
     /*
   * Method to add estimated BAC reading to database
   */
-    public void addReadingToDatabaseAndPreferences(){
+    public void addReadingToDatabaseAndPreferences() {
         double latitude = Utils.DUMMY_LATITUDE_AND_LONGITUDE_VALUE;
         double longitude = Utils.DUMMY_LATITUDE_AND_LONGITUDE_VALUE;
 
@@ -118,13 +121,7 @@ public class ClassificationHelper extends AsyncTask<Context, Void, String> {
         int currentYear = Utils.getCurrentYear();
         int currentWeek = Utils.getCurrentWeek();
 
-        // Get user's current location
-        LocationManager lm = (LocationManager)mContext.getSystemService(Context.LOCATION_SERVICE);
-        Location location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        if(location != null) {
-            longitude = location.getLongitude();
-            latitude = location.getLatitude();
-        }
+
 
         // Values to put into database:
         ContentValues content = new ContentValues();
@@ -132,8 +129,6 @@ public class ClassificationHelper extends AsyncTask<Context, Void, String> {
         content.put(DatabaseContract.BACReadingsTable.COLUMN_NAME_WEEK_OF_YEAR, currentWeek);
         content.put(DatabaseContract.BACReadingsTable.COLUMN_NAME_YEAR, currentYear);
         content.put(DatabaseContract.BACReadingsTable.COLUMN_NAME_BAC, bin);
-        content.put(DatabaseContract.BACReadingsTable.COLUMN_NAME_LOCATION_LATITUDE, latitude);
-        content.put(DatabaseContract.BACReadingsTable.COLUMN_NAME_LOCATION_LONGITUDE, longitude);
 
         // Actually add to database:
         writableDatabase.insert(DatabaseContract.BACReadingsTable.TABLE_NAME, null, content);
@@ -149,6 +144,8 @@ public class ClassificationHelper extends AsyncTask<Context, Void, String> {
         editor.putString(Utils.LAST_BAC_ESTIMATION_TIME, formattedDateString);
         editor.commit();
         Log.i("Classification", "Just put classification results into database and preferences.");
+            return;
+
     }
 
     //This method will classify the extracted data
@@ -162,8 +159,14 @@ public class ClassificationHelper extends AsyncTask<Context, Void, String> {
         Instances userData = createWekaObject(normalizedAttributes, (1.0 * weight), genderNumber, height, age);
         userData.setClassIndex(userData.numAttributes() - 1);
 
+        ConverterUtils.DataSource dataFile = new ConverterUtils.DataSource(mContext.getAssets().open("some10mov2000rem0movsegTWOCLASSselected.arff"));
+        Instances data = dataFile.getDataSet();
+        if(data.classIndex() == -1) {
+            data.setClassIndex(data.numAttributes() -1);
+        }
+
         //Creating our model based on the training data
-        cls = (Classifier) weka.core.SerializationHelper.read(mContext.getAssets().open("finalModel.model"));
+        cls = (RandomForest) weka.core.SerializationHelper.read(mContext.getAssets().open("finalModel.model"));
 
         //Classify each instance individually
         classifyDataInstances(userData);
@@ -176,10 +179,9 @@ public class ClassificationHelper extends AsyncTask<Context, Void, String> {
  * @param userData is the extracted feature data for the user
  */
     public void classifyDataInstances(Instances userData) throws Exception {
-        for (int i = 0; i < userData.numInstances(); i++) {
-            double clsLabel = cls.classifyInstance(userData.instance(i));
+            double clsLabel = cls.classifyInstance(userData.get(0));
             bin = userData.classAttribute().value((int) clsLabel);
-        }
+//        }
     }
 
     public List<String> getListofGeneratedFeatures(String generatedFeaturesString) {
@@ -252,7 +254,7 @@ public class ClassificationHelper extends AsyncTask<Context, Void, String> {
 
     //this method handles feature extraction
     public void runCallToAPIToStartFeatureExtraction() throws IOException, JSONException{
-        final String endpointURL = "http://xxx.xxx.xx.xxx/?method=alcogait&format=json";
+        final String endpointURL = "http://130.215.250.210/?method=alcogait&format=json";
 
         readableDB = new DatabaseContract.DatabaseHelper(mContext).getReadableDatabase();
 
@@ -299,7 +301,7 @@ public class ClassificationHelper extends AsyncTask<Context, Void, String> {
         //Analyzing response
         InputStream in = conn.getInputStream();
         Log.i("Data From Server", "Input from the server was: "+ in.toString());
-        extractedFeaturesJsonResult = IOUtils.toString(in, Charset.defaultCharset());
+        extractedFeaturesJsonResult = IOUtils.toString(in);
         //Grab just the status code;
         String statusValue = extractedFeaturesJsonResult.substring((extractedFeaturesJsonResult.indexOf("status")), (extractedFeaturesJsonResult.indexOf("data")-1));
         statusValue = statusValue.replace("\"", ""); //remove that quotation mark from this string

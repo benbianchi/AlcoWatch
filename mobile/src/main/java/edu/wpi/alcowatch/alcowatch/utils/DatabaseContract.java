@@ -98,6 +98,19 @@ public class DatabaseContract {
             super(context, DATABASE_NAME, null, DATABASE_VERSION);
         }
 
+        public void InsertIntoAcc(SQLiteDatabase db, Long time, float  x, float  y, float z)
+        {
+
+            db.execSQL("INSERT INTO sensor_readings ("+SensorReadingsTable.COLUMN_NAME_TIMESTAMP+","+SensorReadingsTable.COLUMN_NAME_SENSOR_NAME+","+SensorReadingsTable.COLUMN_NAME_X+","+SensorReadingsTable.COLUMN_NAME_Y+","+SensorReadingsTable.COLUMN_NAME_Z+") " +
+                    "VALUES ("+time+",\'accelerometer\', "+x+","+y+","+z+");");
+        }
+
+        public void InsertIntoGryo(SQLiteDatabase db, Long time, float x, float y, float z)
+        {
+            db.execSQL("INSERT INTO sensor_readings ("+SensorReadingsTable.COLUMN_NAME_TIMESTAMP+","+SensorReadingsTable.COLUMN_NAME_SENSOR_NAME+","+SensorReadingsTable.COLUMN_NAME_X+","+SensorReadingsTable.COLUMN_NAME_Y+","+SensorReadingsTable.COLUMN_NAME_Z+") " +
+                    "VALUES ("+time+",\'gyroscope\', "+x+","+y+","+z+");");
+        }
+
         //Creating each of these tables
         public void onCreate(SQLiteDatabase db) {
             Log.i("Initial DB Setup", "Database tables have been created!");

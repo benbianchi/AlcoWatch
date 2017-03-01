@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.provider.ContactsContract;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -51,11 +52,10 @@ public class ProfileActivity extends AppCompatActivity {
         EditText ageInput = (EditText) findViewById(R.id.profileAgeInput);
 
         if (heightInput.getText().toString() == "" || weightInput.getText().toString() == "" || ageInput.getText().toString() == "" || gender == "") {
-            Toast invalidCredentials = new Toast(this);
-
-            Toast.makeText(this,R.string.invalid_credentials,Toast.LENGTH_LONG);
-            invalidCredentials.show();
-
+            Log.v("?W",weightInput.getText().toString());
+            Log.v("?H",heightInput.getText().toString());
+            Log.v("?A",ageInput.getText().toString());
+            Log.v("?G",gender.toString());
             return;
         }
 
@@ -67,7 +67,8 @@ public class ProfileActivity extends AppCompatActivity {
         editor.putInt(Utils.HEIGHT, p.getHeight());
         editor.putString(Utils.GENDER, p.getGender());
         editor.commit();
-
+        Intent i = new Intent(getApplicationContext(),MobileDataMapActivity.class);
+        startActivity(i);
     }
 
 
