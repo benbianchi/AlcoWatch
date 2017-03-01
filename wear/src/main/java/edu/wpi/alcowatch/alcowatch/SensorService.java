@@ -1,6 +1,9 @@
 package edu.wpi.alcowatch.alcowatch;
 
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.hardware.Sensor;
@@ -8,14 +11,20 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.AsyncTask;
+import android.os.Bundle;
+import android.os.Environment;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.google.android.gms.wearable.DataMap;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -23,7 +32,8 @@ import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.Instance;
 import weka.core.Instances;
-
+import weka.core.converters.ArffSaver;
+import weka.core.converters.ConverterUtils.DataSource;
 
 public class SensorService extends Service implements SensorEventListener {
 
@@ -33,12 +43,6 @@ public class SensorService extends Service implements SensorEventListener {
     private static int ACCELEROMETER_BUFFER_CAPACITY = 2048;
 
     private static int mFeatLen = ACCELEROMETER_BLOCK_CAPACITY + 2;
-
-
-
-    private static String CLASS_LABEL_KEY = "label";
-    private static String CLASS_LABEL_SMOKING = "smoking";
-    private static String CLASS_LABEL_PUFFING = "not_smoking";
 
 
     private static int SERVICE_TASK_TYPE_COLLECT = 0;
@@ -53,9 +57,6 @@ public class SensorService extends Service implements SensorEventListener {
     private Sensor mRotationVector;
 
     private int mServiceTaskType;
-    private String mLabel;
-    private Instances mDataset;
-    private Attribute mClassAttribute;
     private OnSensorChangedTask mAsyncTask;
 
     private static ArrayBlockingQueue<Float> mAccBufferX;
@@ -66,11 +67,6 @@ public class SensorService extends Service implements SensorEventListener {
     private static ArrayBlockingQueue<Float> mGyroBufferX;
     private static ArrayBlockingQueue<Float> mGyroBufferY;
     private static ArrayBlockingQueue<Float> mGyroBufferZ;
-
-    private static ArrayBlockingQueue<Float> mRotationBufferX;
-    private static ArrayBlockingQueue<Float> mRotationBufferY;
-    private static ArrayBlockingQueue<Float> mRotationBufferZ;
-    private static ArrayBlockingQueue<Float> mRotationBufferW;
 
 
     public static final DecimalFormat df = new DecimalFormat("#.##");
@@ -94,12 +90,6 @@ public class SensorService extends Service implements SensorEventListener {
         mGyroBufferY = new ArrayBlockingQueue<Float>(ACCELEROMETER_BUFFER_CAPACITY);
         mGyroBufferZ = new ArrayBlockingQueue<Float>(ACCELEROMETER_BUFFER_CAPACITY);
 
-
-        mRotationBufferX = new ArrayBlockingQueue<Float>(ACCELEROMETER_BUFFER_CAPACITY);
-        mRotationBufferY = new ArrayBlockingQueue<Float>(ACCELEROMETER_BUFFER_CAPACITY);
-        mRotationBufferZ = new ArrayBlockingQueue<Float>(ACCELEROMETER_BUFFER_CAPACITY);
-        mRotationBufferW = new ArrayBlockingQueue<Float>(ACCELEROMETER_BUFFER_CAPACITY);
-
     }
 
     @Override
@@ -118,14 +108,9 @@ public class SensorService extends Service implements SensorEventListener {
         mGyroscope = mSensorManager
                 .getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 
-        mRotationVector = mSensorManager
-                .getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-
         mSensorManager.registerListener(this, mAccelerometer,
                 SensorManager.SENSOR_DELAY_FASTEST);
         mSensorManager.registerListener(this, mGyroscope,
-                SensorManager.SENSOR_DELAY_FASTEST);
-        mSensorManager.registerListener(this, mRotationVector,
                 SensorManager.SENSOR_DELAY_FASTEST);
 
         mServiceTaskType = SERVICE_TASK_TYPE_COLLECT;
@@ -153,29 +138,21 @@ public class SensorService extends Service implements SensorEventListener {
         @Override
         protected Void doInBackground(Void... arg0) {
 
-            Instance inst = new DenseInstance(mFeatLen);
-            inst.setDataset(mDataset);
+            Log.v("MQP", "Start sensorChangedTask");
             int blockSize = 0;
             float[] accBlockX = new float[ACCELEROMETER_BLOCK_CAPACITY];
             float[] accBlockY = new float[ACCELEROMETER_BLOCK_CAPACITY];
             float[] accBlockZ = new float[ACCELEROMETER_BLOCK_CAPACITY];
+            long[] times = new long[ACCELEROMETER_BLOCK_CAPACITY];
 
 
             float[] gyroBlockX = new float[ACCELEROMETER_BLOCK_CAPACITY];
             float[] gyroBlockY = new float[ACCELEROMETER_BLOCK_CAPACITY];
             float[] gyroBlockZ = new float[ACCELEROMETER_BLOCK_CAPACITY];
 
-            float[] rotationVectorX = new float[ACCELEROMETER_BLOCK_CAPACITY];
-            float[] rotationVectorY = new float[ACCELEROMETER_BLOCK_CAPACITY];
-            float[] rotationVectorZ = new float[ACCELEROMETER_BLOCK_CAPACITY];
-            float[] rotationVectorW = new float[ACCELEROMETER_BLOCK_CAPACITY];
-
-
-
-            long time = System.currentTimeMillis();
-
             while (true) {
                 try {
+//                    Log.v("MQP","Send block");
                     // need to check if the AsyncTask is cancelled or not in the while loop
                     if (isCancelled () == true)
                     {
@@ -191,11 +168,13 @@ public class SensorService extends Service implements SensorEventListener {
                     gyroBlockY[blockSize] = mGyroBufferY.take().floatValue();
                     gyroBlockZ[blockSize] = mGyroBufferZ.take().floatValue();
 
-                    rotationVectorX[blockSize] = mRotationBufferX.take().floatValue();
+                    times[blockSize++] = System.currentTimeMillis();
+
+   /*               rotationVectorX[blockSize] = mRotationBufferX.take().floatValue();
                     rotationVectorY[blockSize] = mRotationBufferY.take().floatValue();
                     rotationVectorZ[blockSize] = mRotationBufferZ.take().floatValue();
                     rotationVectorW[blockSize++] = mRotationBufferW.take().floatValue();
-
+*/
 
                     if (blockSize == ACCELEROMETER_BLOCK_CAPACITY) {
                         blockSize = 0;
@@ -211,19 +190,12 @@ public class SensorService extends Service implements SensorEventListener {
                         dataMap.putFloatArray("gy", gyroBlockY);
                         dataMap.putFloatArray("gz", gyroBlockZ);
 
-                        dataMap.putFloatArray("rx", rotationVectorX);
-                        dataMap.putFloatArray("ry", rotationVectorY);
-                        dataMap.putFloatArray("rz", rotationVectorZ);
-                        dataMap.putFloatArray("rw", rotationVectorW);
-
-                        dataMap.putLong("dt", System.currentTimeMillis() - time);
+                        dataMap.putLongArray("dt", times);
 
                         dataMap.putString("type", "data");
 
                         messageIntent.putExtra("datamap", dataMap.toBundle());
                         localBroadcastManager.sendBroadcast(messageIntent);
-
-                        time = System.currentTimeMillis();
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -257,17 +229,6 @@ public class SensorService extends Service implements SensorEventListener {
                 mGyroBufferX.add(new Float(event.values[0]));
                 mGyroBufferY.add(new Float(event.values[1]));
                 mGyroBufferZ.add(new Float(event.values[2]));
-            } catch (IllegalStateException e) {
-
-            }
-        }
-        else if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
-
-            try {
-                mRotationBufferX.add(new Float(event.values[0]));
-                mRotationBufferY.add(new Float(event.values[1]));
-                mRotationBufferZ.add(new Float(event.values[2]));
-                mRotationBufferW.add(new Float(event.values[3]));
             } catch (IllegalStateException e) {
 
             }
