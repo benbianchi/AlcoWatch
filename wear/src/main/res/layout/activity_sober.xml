@@ -16,29 +16,21 @@
         android:textAlignment="center"
         android:fontFamily="sans-serif"
         android:typeface="serif"
-        android:layout_marginTop="20dp"
-        android:textColor="@color/Title" />
+        android:lineSpacingExtra="10sp"
+        android:textColor="@color/Title"
+        android:layout_weight="1.15"
+        android:paddingTop="20px" />
 
 
-    <ProgressBar
-        style="?android:attr/progressBarStyleLarge"
+    <TextView
+        android:text="Sober"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/sobiretyProgressBar"
-        android:visibility="invisible"
-        tools:visibility="visible"
-        android:indeterminate="false" />
-
-    <Chronometer
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:id="@+id/chronometer"
+        android:id="@+id/textView"
+        android:textAppearance="@style/TextAppearance.Wearable.Large"
         android:textAlignment="center"
-        android:format="60"
-        android:height="80dp"
-        android:textStyle="normal|bold"
-        android:textSize="18sp"
-        android:visibility="invisible" />
+        android:textColor="@color/white"
+        android:layout_weight="0.72" />
 
     <Button
         android:text="Record"

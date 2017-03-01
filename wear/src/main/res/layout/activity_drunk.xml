@@ -5,7 +5,8 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context="edu.wpi.alcowatch.alcowatch.BACUpdateDisplayActivity"
-    tools:deviceIds="wear">
+    tools:deviceIds="wear"
+    android:background="@color/colorPrimary">
 
     <TextView
         android:id="@+id/Title"
@@ -16,35 +17,26 @@
         android:textAlignment="center"
         android:fontFamily="sans-serif"
         android:typeface="serif"
-        android:layout_marginTop="20dp"
-        android:textColor="@color/Title" />
+        android:lineSpacingExtra="10sp"
+        android:textColor="@color/colorAccent"
+        android:layout_weight="1.15"
+        android:paddingTop="20px" />
 
 
-    <ProgressBar
-        style="?android:attr/progressBarStyleLarge"
+    <TextView
+        android:text="YOU ARE NOW OVER THE LIMIT TO DRIVE"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/sobiretyProgressBar"
-        android:visibility="invisible"
-        tools:visibility="visible"
-        android:indeterminate="false" />
-
-    <Chronometer
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:id="@+id/chronometer"
+        android:id="@+id/textView"
+        android:textAppearance="@style/TextAppearance.Wearable.Large"
         android:textAlignment="center"
-        android:format="60"
-        android:height="80dp"
-        android:textStyle="normal|bold"
-        android:textSize="18sp"
-        android:visibility="invisible" />
+        android:textColor="@color/white" />
 
     <Button
-        android:text="Record"
+        android:text="{{CALLBACK}}"
         android:layout_width="match_parent"
         android:id="@+id/recordButton"
-        tools:background="@color/colorPrimary"
+        tools:background="@color/colorAccent"
         android:elevation="19dp"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"

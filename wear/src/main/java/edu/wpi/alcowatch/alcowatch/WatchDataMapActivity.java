@@ -6,10 +6,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.wearable.activity.WearableActivity;
+import android.support.wearable.view.ProgressSpinner;
 import android.support.wearable.view.WatchViewStub;
 import android.util.Log;
+import android.view.View;
+import android.widget.Chronometer;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -26,9 +31,15 @@ public class WatchDataMapActivity extends WearableActivity implements
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener {
 
+    private static final int CLASSIFYING_TIME = 60;
+    private static final String COUNT_DOWN_COMPLETE = "Classifying";
     GoogleApiClient googleClient;
 
-    private TextView mTextView;
+    boolean isRecording = false;
+    Chronometer c;
+    ProgressBar p;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +47,9 @@ public class WatchDataMapActivity extends WearableActivity implements
         setContentView(R.layout.activity_display);
 
         setAmbientEnabled();
+
+        c = (Chronometer) findViewById(R.id.chronometer);
+        p = (ProgressBar) findViewById(R.id.sobiretyProgressBar);
 
         // Register the local broadcast receiver
         IntentFilter messageFilter = new IntentFilter(Intent.ACTION_SENDTO);
@@ -50,6 +64,36 @@ public class WatchDataMapActivity extends WearableActivity implements
 
 //        startService(new Intent(this, WatchListenerService.class));
         startService(new Intent(this, SensorService.class));
+    }
+
+
+    public void onRecordButtonClick(View view)
+    {
+        if (isRecording == false) {
+            isRecording = true;
+            c.setVisibility(View.VISIBLE);
+            p.setVisibility(View.VISIBLE);
+
+            new CountDownTimer(CLASSIFYING_TIME*1000, 1000) {
+                Chronometer c = (Chronometer) findViewById(R.id.chronometer);
+                ProgressBar p = (ProgressBar) findViewById(R.id.sobiretyProgressBar);
+
+
+
+                public void onTick(long millisUntilFinished) {
+                    c.setText("Seconds Remaining: " + millisUntilFinished / 1000);
+                    //here you can have your logic to set text to edittext
+                }
+
+                public void onFinish() {
+                    c.setText(COUNT_DOWN_COMPLETE);
+                    c.setVisibility(View.INVISIBLE);
+                    p.setVisibility(View.INVISIBLE);
+                    isRecording = false;
+                }
+
+            }.start();
+        }
     }
 
     // Connect to the data layer when the Activity starts
