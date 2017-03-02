@@ -1,9 +1,6 @@
 package edu.wpi.alcowatch.alcowatch;
 
 
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.hardware.Sensor;
@@ -11,35 +8,22 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.AsyncTask;
-import android.os.Bundle;
-import android.os.Environment;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.google.android.gms.wearable.DataMap;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
-
-import weka.core.Attribute;
-import weka.core.DenseInstance;
-import weka.core.Instance;
-import weka.core.Instances;
-import weka.core.converters.ArffSaver;
-import weka.core.converters.ConverterUtils.DataSource;
 
 public class SensorService extends Service implements SensorEventListener {
 
     private LocalBroadcastManager localBroadcastManager;
 
-    private static int ACCELEROMETER_BLOCK_CAPACITY = 600;
+    private static int ACCELEROMETER_BLOCK_CAPACITY = 64;
     private static int ACCELEROMETER_BUFFER_CAPACITY = 2048;
 
     private static int mFeatLen = ACCELEROMETER_BLOCK_CAPACITY + 2;

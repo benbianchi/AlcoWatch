@@ -1,20 +1,39 @@
 package edu.wpi.alcowatch.alcowatch.User;
 
 /**
- * Created by ben on 1/29/17.
+ * This class is just a data structure for the app to use. In reality, it is not used in this application. The profile is stored in a shared preferences object.
+ * However, this class validates all of the biometric data. Gender can only be "male" or "female".
+ * @author Benjamin Bianchi
+ * @version  1
  */
-
 public class Profile {
-
+    /**
+     * The Birth gender of the subject. Is "male" or "female"
+     */
     private String gender;
 
+    /**
+     * The age of the subject.
+     */
     private Integer age;
+    /**
+     * The weight of the subject, in pounds.
+     */
+    private float weight;
 
-    private Integer weight;
+    /**
+     * The height of the subject, in inches, however, when processed this variable is converted into centimeters.
+     */
+    private float height;
 
-    private Integer height;
-
-    public Profile(String gender, Integer age, Integer weight, Integer height)
+    /**
+     * Create a profile data structre object
+     * @param gender the gender of the subject
+     * @param age the age of the subject
+     * @param weight the weight of the subject, in pounds
+     * @param height the height of the subject, in inches
+     */
+    public Profile(String gender, int age, float weight, float height)
     {
         this.gender = gender;
 
@@ -25,6 +44,10 @@ public class Profile {
         this.height=height;
     }
 
+    /**
+     * Setter for the subject's gender
+     * @param newGender the gender you are setting.
+     */
     public void setGender(String newGender)
     {
         if (newGender.toLowerCase() == "male")
@@ -37,11 +60,19 @@ public class Profile {
 
     }
 
+    /**
+     * getter for the subjects gender
+     * @return returns either "female" or "male"
+     */
     public String getGender()
     {
         return this.gender;
     }
 
+    /**
+     * Setter for age
+     * @param newAge the age you are going to set for the subject
+     */
     public void setAge(Integer newAge)
     {
         if (newAge < 0)
@@ -63,11 +94,19 @@ public class Profile {
             this.weight = newWeight;
     }
 
-    public Integer getWeight()
+    /**
+     * Getter for the weight of the subject
+     * @return a float that represents the weight of the subject
+     */
+    public float getWeight()
     {
         return this.weight;
     }
 
+    /**
+     * Setter for the subject's height.
+     * @param newHeight the new height in inches for the subject.
+     */
     public void setHeight(Integer newHeight)
     {
         if (newHeight < 0)
@@ -76,7 +115,11 @@ public class Profile {
             this.height = newHeight;
     }
 
-    public Integer getHeight(){
+    /**
+     * getter for the subject's height
+     * @return a float denoting the height of the subject.
+     */
+    public float getHeight(){
         return this.height;
     }
 

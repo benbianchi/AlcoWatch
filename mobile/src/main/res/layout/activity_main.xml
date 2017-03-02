@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/activity_main"
     android:layout_width="match_parent"
@@ -10,118 +11,21 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="edu.wpi.alcowatch.alcowatch.MobileDataMapActivity">
 
-    <LinearLayout
-        android:orientation="vertical"
+
+    <TextView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="55dp">
+        android:layout_height="wrap_content"
+        android:inputType="textPersonName"
+        android:id="@+id/editText"
+        android:text="AlcoWatchMQP"
+        tools:text="AlcoWatch Ready." />
 
-        <TextView android:text=""
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:id="@+id/output"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentEnd="true" />
+    <TextView android:text="Output"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/output"
+        android:textAppearance="@style/TextAppearance.AppCompat.Light.SearchResult.Subtitle"
+        android:paddingTop="100dp" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:id="@+id/linearLayout1"
-            android:layout_alignParentTop="true"
-            android:layout_alignParentStart="true">
 
-            <TextView android:text="Save as: "
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:layout_alignParentStart="true"
-                android:layout_alignParentEnd="true"
-                android:layout_marginRight="10dp"/>
-
-            <EditText
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textPersonName"
-                android:ems="10"
-                android:layout_below="@+id/sendButton"
-                android:layout_centerHorizontal="true"
-                android:id="@+id/editText"
-                android:text="AlcoWatchMQP" />
-
-        </LinearLayout>
-
-        <Chronometer
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/chronometer"
-            android:textSize="100dp"
-            android:layout_above="@+id/output"
-            android:layout_centerHorizontal="true"
-            android:layout_marginBottom="12dp" />
-
-        <Button
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="Start"
-            android:id="@+id/sendButton"
-            android:layout_above="@+id/chronometer"
-            android:layout_alignParentStart="true"
-            android:layout_marginBottom="19dp" />
-
-        <RadioGroup
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@+id/linearLayout1"
-            >
-            <RadioButton
-                android:text="No Goggles (0 BAC)"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/radioButton"
-                android:textSize="18sp"
-                android:layout_marginTop="15dp"
-                android:layout_alignParentStart="true"
-                android:checked="true" />
-
-            <RadioButton
-                android:text="Green Goggles (0.04 - 0.06 BAC)"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/radioButton2"
-                android:textSize="18sp"
-                android:layout_below="@+id/radioButton"
-                android:layout_alignParentStart="true" />
-
-            <RadioButton
-                android:text="Black Goggles (0.08 - 0.15 BAC)"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/radioButton3"
-                android:textSize="18sp"
-                android:layout_below="@+id/radioButton2"
-                android:layout_alignParentStart="true" />
-
-            <RadioButton
-                android:text="Red Goggles (0.15 - 0.25 BAC)"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/radioButton4"
-                android:textSize="18sp"
-                android:layout_below="@+id/radioButton3"
-                android:layout_alignParentStart="true" />
-
-            <RadioButton
-                android:text="Orange Goggles (0.25 - 0.35 BAC)"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/radioButton5"
-                android:textSize="18sp"
-                android:layout_below="@+id/radioButton4"
-                android:layout_alignParentStart="true" />
-        </RadioGroup>
-    </LinearLayout>
 </RelativeLayout>

@@ -35,7 +35,7 @@
     <Button
         android:text="{{CALLBACK}}"
         android:layout_width="match_parent"
-        android:id="@+id/recordButton"
+        android:id="@+id/callbackButton"
         tools:background="@color/colorAccent"
         android:elevation="19dp"
         android:layout_height="wrap_content"

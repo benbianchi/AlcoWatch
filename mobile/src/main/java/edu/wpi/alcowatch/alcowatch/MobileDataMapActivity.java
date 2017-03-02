@@ -5,13 +5,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
-import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
-import android.os.SystemClock;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
@@ -24,160 +21,137 @@ import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.TextView;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.wearable.DataApi;
-import com.google.android.gms.wearable.DataEvent;
-import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataMap;
-import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
-import java.io.File;
-import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 
 import edu.wpi.alcowatch.alcowatch.Classification.ClassificationHelper;
 import edu.wpi.alcowatch.alcowatch.utils.DatabaseContract;
+import edu.wpi.alcowatch.alcowatch.utils.Utils;
 import weka.core.Attribute;
 import weka.core.Instances;
-import weka.core.converters.ArffSaver;
-import weka.core.pmml.Array;
 
-//import com.google.android.gms.wearable.DataApi;
-//import com.google.android.gms.wearable.DataMap;
-//import com.google.android.gms.wearable.PutDataMapRequest;
-//import com.google.android.gms.wearable.PutDataRequest;
+/**
+ * The Main activity that displays on the phone. This activity has a title, and a status textview. It is able to start services that listen for messages from the wearable.
+ * It also communicates with a pre-programmed matlab server that calculates the features of each time a subject starts the applicaton.
+ * @author Steven Ireland, Andrew McAfee, Benjamin Bianchi
+ * @version 2
+ */
 
 
 public class MobileDataMapActivity extends AppCompatActivity
 {
-
-    private Chronometer chronometer;
-
-    private EditText labelField;
-
-    ArrayList<Attribute> attributes;
-    Instances mDataset;
-
+    /**
+     * The Shared Prefence object that holds the biommetric data for the subject, as well as his preferred callback.
+     */
+    static SharedPreferences bacSharedPreferences;
+    /**
+     * Used for permissions required by the android OS
+     */
     int hasPermission = 0;
 
-    String mClass = "no_goggles";
-
+    /**
+     * The service Intent that will spawn the MobileListenerService service, which implements a WearableListenerService, allowing communication from the wearable to the phone, without the mobile application
+     * being in the foreground.
+     */
     Intent serviceIntent;
 
-    public static Boolean classifying = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         setContentView(R.layout.activity_main);
 
-        attributes = new ArrayList<>();
-        attributes.add(new Attribute("dt"));
-        attributes.add(new Attribute("x"));
-        attributes.add(new Attribute("y"));
-        attributes.add(new Attribute("z"));
-        attributes.add(new Attribute("gx"));
-        attributes.add(new Attribute("gy"));
-        attributes.add(new Attribute("gz"));
-        ArrayList class_nominal_values = new ArrayList<String>(5);
-        class_nominal_values.add("no_goggles");
-        class_nominal_values.add("green_goggles");
-        class_nominal_values.add("black_goggles");
-        class_nominal_values.add("red_goggles");
-        class_nominal_values.add("orange_goggles");
-        attributes.add(new Attribute("goggles_class", class_nominal_values));
+        /**
+         * Load biometric data from subject.
+         */
+        bacSharedPreferences = getApplicationContext().getSharedPreferences(Utils.BAC_NOTIFICATION_SETTINGS, getApplicationContext().MODE_PRIVATE);
 
-        mDataset = new Instances("mqp_features", attributes, 10000);
-        mDataset.setClassIndex(mDataset.numAttributes() - 1);
 
-        chronometer = (Chronometer) findViewById(R.id.chronometer);
-        labelField = (EditText) findViewById(R.id.editText);
-
+        /**
+         * Connect the application to the database, and clean out all entries so that we don't send old data.
+         */
         DatabaseContract.DatabaseHelper d = new DatabaseContract.DatabaseHelper(getApplicationContext());
         SQLiteDatabase db = d.getWritableDatabase();
         db.delete("sensor_readings","",new String[0]);
 
-        // Register the local broadcast receiver
+        /**
+         * Register the local broadcast receiver -- allows the phone to send messages TO the wearable. The MessageReciever is defined at the bottom of this document.
+         */
+
         IntentFilter messageFilter = new IntentFilter(Intent.ACTION_SEND);
         MessageReceiver messageReceiver = new MessageReceiver();
         LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, messageFilter);
 
 
-        int permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-
-        if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE},
-                    hasPermission);
-        }
-
+        /**
+         * Spawn the WearableListenerService that will listen for data from the wearable.
+         */
         serviceIntent = new Intent(this, MobileListenerService.class);
         startService(serviceIntent);
 
-        final RadioButton radioNoGoggles = (RadioButton) findViewById(R.id.radioButton);
-        final RadioButton radioGreenGoggles = (RadioButton) findViewById(R.id.radioButton2);
-        final RadioButton radioBlackGoggles = (RadioButton) findViewById(R.id.radioButton3);
-        final RadioButton radioRedGoggles = (RadioButton) findViewById(R.id.radioButton4);
-        final RadioButton radioOrangeGoggles = (RadioButton) findViewById(R.id.radioButton5);
-        radioNoGoggles.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View v){
-                mClass = "no_goggles";
-            }
-        });
-        radioGreenGoggles.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View v){
-                mClass = "green_goggles";
-            }
-        });
-        radioBlackGoggles.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View v){
-                mClass = "black_goggles";
-            }
-        });
-        radioRedGoggles.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View v){
-                mClass = "red_goggles";
-            }
-        });
-        radioOrangeGoggles.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View v){ mClass = "orange_goggles";    }
-        });
-
-        final Button button = (Button) findViewById(R.id.sendButton);
-        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-            }
-        });
-
     }
 
+
+    /**
+     * The Message path used by the android OS and android manifest that forwards data towards the wearable's registered listeners.
+     */
+    private static final String WEARABLE_DATA_PATH = "/wearable_data";
+
+    /**
+     * This function is invoked after the phone communicates with matlab server to extract features. If there is missing biometric data, then we will spawn the
+     * Profile screen so that the user is forced to fill out his/her biometric data.
+     */
     protected void onFullReadingComplete(){
+        Intent i = new Intent(getApplicationContext(), ProfileActivity.class);
 
-        ClassificationHelper ch = new ClassificationHelper(this.getApplicationContext());
-        ch.execute();
+        /**
+         * Load Biometric Data
+         */
+        String gender = bacSharedPreferences.getString(Utils.GENDER, "");
+        double weight = bacSharedPreferences.getInt(Utils.WEIGHT, 0);
+        double height = (1.0 *(bacSharedPreferences.getInt(Utils.HEIGHT,0)) / Utils.CONVERT_INCHES_TO_CM);
+        String age =  (bacSharedPreferences.getString(Utils.AGE, ""));
 
-        classifying = false;
+
+        /**
+         * Classify features if biometrics are correctly filled out. Must use a thread in order for the Main thread to not hang (Android error is thrown).
+         */
+        if (weight != 0 && gender != "" && height != 0 && age != "") {
+
+        Runnable r = new Runnable() {
+            @Override
+            public void run() {
+
+                ClassificationHelper ch = new ClassificationHelper(getApplicationContext());
+
+                TextView tv = (TextView) findViewById(R.id.output);
+                tv.setText("Sending Request to Server");
+                ch.execute();
+            }
+        };
+            r.run();
+
+        }
+        else
+        {
+            startActivity(i);
+        }
 
     }
 
-    // Connect to the data layer when the Activity starts
+
     @Override
     protected void onStart() {
         super.onStart();
     }
 
-    private static final String MOBILE_DATA_PATH = "/mobile_data";
 
     public void onDestroy(){
         stopService(serviceIntent);
@@ -190,22 +164,31 @@ public class MobileDataMapActivity extends AppCompatActivity
         super.onStop();
     }
 
+    /**
+     * Class that sends a message to the wearable. Messages contains data from the current time, accelerometer and gryroscope. x, y, z correspond to accelerometer; gx, gy, gz correspond
+     * to gyroscope data.
+     */
     public class MessageReceiver extends BroadcastReceiver {
 
+        /**
+         * Tell the message reciever which database we are inserting into, and how to store decimals within it.
+         */
         DatabaseContract.DatabaseHelper d = new DatabaseContract.DatabaseHelper(getApplicationContext());
         SQLiteDatabase db = d.getWritableDatabase();
         public final DecimalFormat df = new DecimalFormat("#.##");
 
+
         @Override
         public void onReceive(Context context, Intent intent) {
-            Log.v("AW","onReceive");
-            if(classifying)
-                return;
-            classifying = true;
+
             Bundle data = intent.getBundleExtra("datamap");
-            if (data.getString("type").equals("status")) {
-                //
-            } else if (data.getString("type").equals("data")) {
+
+            if (data.getString("type").equals("status")) {} // Normal Ping
+
+            else if (data.getString("type").equals("end")){ // This is sent at the end of the transmission from the wearable.
+                    onFullReadingComplete();
+            }
+            else if (data.getString("type").equals("data")) { // THis is sent when the wearable is transferring actual data to the phone.
 
                 // Log the data
                 long[] dt = data.getLongArray("dt");
@@ -216,6 +199,9 @@ public class MobileDataMapActivity extends AppCompatActivity
                 float[] gy = data.getFloatArray("gy");
                 float[] gz = data.getFloatArray("gz");
 
+                /**
+                 * Notify the activity that we are recieving data from the wearable.
+                 */
                 String output = "Receiving Data";
                 TextView tv = (TextView) findViewById(R.id.output);
                 tv.setText(output);
@@ -226,8 +212,45 @@ public class MobileDataMapActivity extends AppCompatActivity
                     d.InsertIntoGryo(db,dt[i],gx[i],gy[i],gz[i]);
 
                 }
+            }
+        }
+    }
 
-                onFullReadingComplete();
+    /**
+     * The Thread that sends a message from the phone to the wearable. This dataMap contains the sobriety ruling, and the callback that the user
+     * selected.
+     */
+    public static class SendToDataLayerThread extends Thread {
+        String path;
+
+        // Constructor for sending data objects to the data layer
+        public SendToDataLayerThread(String p) {
+            path = p;
+        }
+
+        public void run() {
+
+            /**
+             * Create Datamap and fill it with a classificationResult, a callback, and Time. Change the type flag to classUpdate and send.
+             */
+            DataMap dataMap = new DataMap();
+            // Get classification result here  ..........................
+            dataMap.putString("classificationResult",bacSharedPreferences.getString(Utils.LAST_BAC_ESTIMATION,""));
+            dataMap.putString("callback",bacSharedPreferences.getString(Utils.CALLBACK,""));
+            Calendar rightNow = Calendar.getInstance();
+            dataMap.putLong("time",rightNow.getTimeInMillis());
+            dataMap.putString("type","classUpdate");
+
+            // Construct a DataRequest and send over the data layer
+            PutDataMapRequest putDMR = PutDataMapRequest.create(path);
+            putDMR.setUrgent();
+            putDMR.getDataMap().putAll(dataMap);
+            PutDataRequest request = putDMR.asPutDataRequest();
+            DataApi.DataItemResult result = Wearable.DataApi.putDataItem(MobileListenerService.googleClient, request).await();
+            if (result.getStatus().isSuccess()) {
+                Log.v("MQP", "DataMap: " + dataMap.getString("classificationResult") + " sent successfully to watch");
+            } else {
+                Log.v("MQP", "Failed to send classificationResult to watch");
             }
         }
     }

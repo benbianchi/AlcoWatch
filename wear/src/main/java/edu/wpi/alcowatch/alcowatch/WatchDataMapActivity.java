@@ -1,5 +1,5 @@
-package edu.wpi.alcowatch.alcowatch;
 
+package edu.wpi.alcowatch.alcowatch;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -7,15 +7,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.os.Vibrator;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.wearable.activity.WearableActivity;
-import android.support.wearable.view.ProgressSpinner;
-import android.support.wearable.view.WatchViewStub;
 import android.util.Log;
 import android.view.View;
 import android.widget.Chronometer;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -25,59 +23,124 @@ import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
-import java.util.Date;
+import static android.view.View.GONE;
 
 public class WatchDataMapActivity extends WearableActivity implements
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener {
 
-    private static final int CLASSIFYING_TIME = 60;
+    /**
+     * The duration of the walk trial.
+     */
+    private static final int CLASSIFYING_TIME = 10;
+    /**
+     * Message displayed after CountDown.
+     */
     private static final String COUNT_DOWN_COMPLETE = "Classifying";
-    GoogleApiClient googleClient;
+    /**
+     * Message Path used by OS to forward data to phone.
+     */
+    private static final String MOBILE_DATA_PATH = "/mobile_data";
 
+    /**
+     * Google Client that allows wearable to connect to phone.
+     */
+    public static GoogleApiClient googleClient;
+
+    /**
+     * Boolean that is set to true when we are recording a walk.
+     */
     boolean isRecording = false;
+    /**
+     * Chronometer that is the countdown timer.
+     */
     Chronometer c;
+    /**
+     * ProgressBar shown when record button is hit.
+     */
     ProgressBar p;
 
+    /**
+     * The thread that will send info to the phone.
+     */
+    Thread sendingThread;
+    /**
+     * Used to signal to send an "end transmission" message.
+     */
+    private boolean sendLastPacket = false;
 
+    /**
+     * Intent for spawning a sensor listener.
+     */
+    Intent watchListenerIntent;
+    /**
+     * Callback from user profile
+     */
+    private String callback;
+    /**
+     * Message Reciever that will be used to recieve the classificationResult, and the callback.
+     */
+    MessageReceiver messageReceiver;
+    /**
+     * IntentFilter used to forward messages to the MessageReciever.
+     */
+    IntentFilter messageFilter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_display);
 
-        setAmbientEnabled();
 
         c = (Chronometer) findViewById(R.id.chronometer);
         p = (ProgressBar) findViewById(R.id.sobiretyProgressBar);
 
         // Register the local broadcast receiver
-        IntentFilter messageFilter = new IntentFilter(Intent.ACTION_SENDTO);
-        MessageReceiver messageReceiver = new MessageReceiver();
-        LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, messageFilter);
+        this.messageFilter= new IntentFilter(Intent.ACTION_SENDTO);
+        this.messageReceiver = new MessageReceiver();
 
+
+        /**
+         * Establish connection to phone.
+         */
         googleClient = new GoogleApiClient.Builder(this)
                 .addApi(Wearable.API)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
                 .build();
 
-//        startService(new Intent(this, WatchListenerService.class));
+        googleClient.connect();
+
         startService(new Intent(this, SensorService.class));
     }
 
 
-    public void onRecordButtonClick(View view)
-    {
+    public void onRecordButtonClick(View view) {
+
+        /**
+         * if button is clicked and we arent recording... put activity in recording state.
+         * else do nothing
+         */
         if (isRecording == false) {
             isRecording = true;
+
+            /**
+             * Show that we are recording.
+             */
             c.setVisibility(View.VISIBLE);
             p.setVisibility(View.VISIBLE);
+            sendLastPacket = false;
 
-            new CountDownTimer(CLASSIFYING_TIME*1000, 1000) {
+            /**
+             * Allow the message Reciever to listen for data
+             */
+            LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, messageFilter);
+            /**
+             * Create Countdown for set time.
+             */
+            new CountDownTimer(CLASSIFYING_TIME * 1000, 1000) {
                 Chronometer c = (Chronometer) findViewById(R.id.chronometer);
                 ProgressBar p = (ProgressBar) findViewById(R.id.sobiretyProgressBar);
-
 
 
                 public void onTick(long millisUntilFinished) {
@@ -86,10 +149,22 @@ public class WatchDataMapActivity extends WearableActivity implements
                 }
 
                 public void onFinish() {
+
+                    /**
+                     * Reset view to not recording mode, but set the text to say we are waiting for a result.
+                     */
                     c.setText(COUNT_DOWN_COMPLETE);
-                    c.setVisibility(View.INVISIBLE);
                     p.setVisibility(View.INVISIBLE);
-                    isRecording = false;
+                    sendLastPacket = true;
+
+                    /**
+                     * Vibrate, as requested by professor Agu.
+                     */
+                    Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+                    long[] vibrationPattern = {0, 500, 50, 300};
+                    //-1 - don't repeat
+                    final int indexInPatternToRepeat = -1;
+                    vibrator.vibrate(vibrationPattern, indexInPatternToRepeat);
                 }
 
             }.start();
@@ -105,8 +180,8 @@ public class WatchDataMapActivity extends WearableActivity implements
 
     @Override
     public void onConnected(Bundle connectionHint) {
-
-
+        watchListenerIntent = new Intent(this,WatchListenerService.class);
+        startService(watchListenerIntent);
     }
 
     // Disconnect from the data layer when the Activity stops
@@ -120,7 +195,8 @@ public class WatchDataMapActivity extends WearableActivity implements
 
     // Placeholders for required connection callbacks
     @Override
-    public void onConnectionSuspended(int cause) { }
+    public void onConnectionSuspended(int cause) {
+    }
 
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
@@ -129,26 +205,80 @@ public class WatchDataMapActivity extends WearableActivity implements
 
 
     public void sendDataToPhone(Bundle data) {
-        String MOBILE_DATA_PATH = "/mobile_data";
 
-        new SendToDataLayerThread(MOBILE_DATA_PATH, data).start();
+        if (isRecording) {
+            sendingThread = new SendToDataLayerThread(MOBILE_DATA_PATH, data);
+            sendingThread.start();
+        }
     }
 
 
     public class MessageReceiver extends BroadcastReceiver {
+        /**
+         * Global. a = sober; b = drunk.
+         */
+        private static final String SOBER = "a";
+
         @Override
         public void onReceive(Context context, Intent intent) {
+
+            /**
+             * Read data recieved, if contains classUpdate, figure out if we recieved a drunk message or sober message. Vibrate. Open corresponding activity.
+             */
             Bundle data = intent.getBundleExtra("datamap");
 
+            if(data.getString("type").equals("classUpdate")) {
+
+                LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(messageReceiver);
+
+                Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+                long[] vibrationPattern = {0, 500, 50, 300};
+                //-1 - don't repeat
+                final int indexInPatternToRepeat = -1;
+                vibrator.vibrate(vibrationPattern, indexInPatternToRepeat);
+
+                String classResult = data.getString("classificationResult");
+                Log.i("REC", "onReceive: "+classResult);
+                if (classResult.equals(SOBER)) {
+                    ((ProgressBar) findViewById(R.id.sobiretyProgressBar)).setVisibility(GONE);
+                    ((Chronometer) findViewById(R.id.chronometer)).setText("Sober");
+                }
+                else {
+                    callback = data.getString("callback");
+                    displayDrunkScreen();
+                }
+            }
             if (data.getString("type").equals("status")) {
             } else if (data.getString("type").equals("data")) {
                 sendDataToPhone(data);
             }
 
+
+//            else if (data.getString("type").equals("sober")) {
+//                displaySoberScreen();
+//            }
+//            else if (data.getString("type").equals("drunk")) {
+//                displayDrunkScreen();
+//            }
+
         }
     }
 
+    private void displayDrunkScreen() {
+        Intent i = new Intent(getApplicationContext(),DrunkActivity.class);
+        i.putExtra("callback",this.callback);
+        startActivity(i);
+    }
 
+    private void displaySoberScreen() {
+        Intent i = new Intent(getApplicationContext(),SoberActivity.class);
+        startActivity(i);
+    }
+
+
+    /**
+     * Simple thread that sends sensor data to phone.
+     */
     class SendToDataLayerThread extends Thread {
         String path;
         Bundle data;
@@ -172,7 +302,13 @@ public class WatchDataMapActivity extends WearableActivity implements
 
             dataMap.putLongArray("dt", data.getLongArray("dt"));
 
-            dataMap.putString("type", "data");
+            /**
+             * If the countdown is done, signal that this is the last message and to perform classification on the phone.
+             */
+            if (sendLastPacket == false)
+                dataMap.putString("type", "data");
+            else
+                dataMap.putString("type", "end");
 
             // Construct a DataRequest and send over the data layer
             PutDataMapRequest putDMR = PutDataMapRequest.create(path);
@@ -180,13 +316,22 @@ public class WatchDataMapActivity extends WearableActivity implements
             putDMR.getDataMap().putAll(dataMap);
             PutDataRequest request = putDMR.asPutDataRequest();
             DataApi.DataItemResult result = Wearable.DataApi.putDataItem(googleClient, request).await();
+
             if (result.getStatus().isSuccess()) {
-                Log.v("MQP", "DataMap: " + dataMap + " sent successfully to data layer ");
-            } else {
-                Log.v("MQP", "Failed to send to data layer.");
+                Log.v("MQP", "DataMap: " + dataMap.getString("type") + " sent successfully to data layer ");
+                if (sendLastPacket) {
+                    isRecording = false;
+                    this.interrupt();
+                }
+                } else {
+                    Log.v("MQP", "Failed to send to data layer.");
+                }
+
+
             }
         }
+
+
     }
 
-}
 

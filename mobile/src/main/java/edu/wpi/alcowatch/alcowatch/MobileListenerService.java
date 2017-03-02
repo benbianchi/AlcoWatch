@@ -17,7 +17,6 @@ import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.Wearable;
-import com.google.android.gms.wearable.WearableListenerService;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -35,7 +34,7 @@ public class MobileListenerService extends Service implements
         GoogleApiClient.OnConnectionFailedListener{
 
     private static final String MOBILE_DATA_PATH = "/mobile_data";
-    GoogleApiClient googleClient;
+    public static GoogleApiClient googleClient;
 
 
     @Override
@@ -57,9 +56,10 @@ public class MobileListenerService extends Service implements
         return result;
     }
 
+
     @Override
     public void onDataChanged(DataEventBuffer dataEvents) {
-        Log.v("AW","onDatChanged");
+        Log.v("AW","onDataChanged");
         DataMap dataMap;
         for (DataEvent event : dataEvents) {
             // Check the data type
@@ -121,6 +121,7 @@ public class MobileListenerService extends Service implements
                 outChannel.close();
         }
     }
+
 
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {

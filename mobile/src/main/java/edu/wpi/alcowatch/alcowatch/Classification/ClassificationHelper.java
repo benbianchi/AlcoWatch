@@ -8,6 +8,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import com.google.android.gms.nearby.messages.MessageFilter;
+
 import org.apache.commons.io.IOUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -53,10 +55,12 @@ public class ClassificationHelper extends AsyncTask<Context, Void, String> {
     RandomForest cls;
     SQLiteDatabase readableDB;
     SQLiteDatabase writableDatabase;
+    private Thread send;
 
 
-    public ClassificationHelper(Context context) {
-        mContext = context;
+    public ClassificationHelper(Context m)
+    {
+        this.mContext = m;
     }
 
     @Override
@@ -101,14 +105,16 @@ public class ClassificationHelper extends AsyncTask<Context, Void, String> {
         bacSharedPreferences = mContext.getSharedPreferences(Utils.BAC_NOTIFICATION_SETTINGS, mContext.MODE_PRIVATE);
         Log.v("Watch Results", bacSharedPreferences.getString(Utils.FEATURE_EXTRACTION_RESULTS, ""));
 
-//        //Step 5: Reopen the main activity
+
+
 //        Intent intent = new Intent(mContext, ProfileActivity.class);
 //        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 //        mContext.startActivity(intent);
 
-        MobileDataMapActivity.classifying = false;
-    }
 
+
+    }
+    private static final String WEARABLE_DATA_PATH = "/wearable_data";
     /*
   * Method to add estimated BAC reading to database
   */
@@ -142,12 +148,17 @@ public class ClassificationHelper extends AsyncTask<Context, Void, String> {
         Log.i("Classification", "In onPostExecute of Feature Extraction and Classification Task, we have now picked a bin for the user, which is: " + bin + " at the time " + formattedDateString);
         editor.putString(Utils.LAST_BAC_ESTIMATION, bin);
         editor.putString(Utils.LAST_BAC_ESTIMATION_TIME, formattedDateString);
+        //
         editor.commit();
+
         Log.i("Classification", "Just put classification results into database and preferences.");
+
+        MobileDataMapActivity.SendToDataLayerThread send = new MobileDataMapActivity.SendToDataLayerThread(WEARABLE_DATA_PATH);
+        send.start();
+
             return;
 
     }
-
     //This method will classify the extracted data
     public void runClassification() throws Exception {
         featureExtractionResults = bacSharedPreferences.getString(Utils.FEATURE_EXTRACTION_RESULTS, "");

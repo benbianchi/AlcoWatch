@@ -27,6 +27,7 @@ public class Utils {
     public static final String BAC_NOTIFICATION_SETTINGS = "BACNotificationSettings"; // Identifies part of shared preferences with anything related to BAC
     public static final String NAME = "name";
     public static final String GENDER = "gender";
+    public static final String CALLBACK = "callback";
     public static final String WEIGHT = "weight";
     public static final String HEIGHT = "height";
     public static final String BIRTHDAY = "birthday";

@@ -26,7 +26,7 @@
         <EditText
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="number"
+            android:inputType="numberDecimal"
             android:ems="10"
             android:id="@+id/profileHeightInput"
             android:hint="Height" />
@@ -34,7 +34,7 @@
         <EditText
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="number"
+            android:inputType="numberDecimal"
             android:ems="10"
             android:hint="Weight"
             android:id="@+id/profileWeightInput" />
@@ -104,7 +104,8 @@
             <RadioGroup
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_weight="1" >
+                android:layout_weight="1"
+                android:id="@+id/emergencyCallbackGroup">
 
                 <RadioButton
                     android:text="Call Contact"
@@ -119,6 +120,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:id="@+id/profileEmergencyCallUber"
+                    android:onClick="setCallBackToUber"
                     android:layout_weight="1" />
 
                 <RadioButton
@@ -126,6 +128,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:id="@+id/profileEmergencyKillSwitch"
+                    android:onClick="setCallBackToKillSwitch"
                     android:layout_weight="1"
                     android:checked="true" />
             </RadioGroup>
@@ -138,8 +141,7 @@
                 android:paddingBottom="0dp"
                 android:padding="0dp"
                 android:layout_marginBottom="0dp"
-                style="@android:style/Widget.DeviceDefault.Light.Button.Small"
-                android:onClick="submitProfile" />
+                style="@android:style/Widget.DeviceDefault.Light.Button.Small" />
         </LinearLayout>
 
     </LinearLayout>
